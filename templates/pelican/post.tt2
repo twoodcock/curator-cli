@@ -1,0 +1,16 @@
+---
+title: [% article.metadata.title %]
+date: [% article.metadata.date %]
+[% IF article.metadata.modified -%]
+modified: [% article.metadata.modified %]
+[% END; # IF article.metadata.modified -%]
+status: [% article.metadata.status %]
+category: [% article.metadata.category %]
+[% IF article.metadata.tags.size() -%]
+tags: [% article.metadata.tags.join(', ') %]
+[% END; # IF article.metadata.tags.size() -%]
+[% IF article.metadata.summary -%]
+summary: [% article.metadata.summary | replace("\n", ' ') %]
+[% END # IF article.metadata.summary -%]
+---
+[% article.body %]

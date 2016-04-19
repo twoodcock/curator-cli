@@ -1,0 +1,100 @@
+#!/usr/bin/perl
+use strictures;
+# This must not be required in production:
+use lib '/home/tim/perl/extlib/lib/perl5';
+use lib 'lib/';
+
+use App::Curator;
+use Getopt::Long;
+use Pod::Usage;
+my %opt = (
+  config => 'curator.yaml'
+);
+GetOptions(
+  'help|?' => \$opt{help},
+  'list|l:s' => \$opt{list},
+  'article|a:s' => \$opt{article},
+  'blog|b:s' => \$opt{blog},
+  'status:s' => \$opt{status},
+  'metadata|m' => \$opt{metadata},
+  'publish-to|pt' => \$opt{'publish-to'},
+  'publish|p' => \$opt{'publish'},
+  'config|c:s' => \$opt{config},
+);
+
+if ($opt{help}) {
+  pod2usage(1);
+}
+
+my $app = App::Curator->new(config_file => $opt{config});
+
+if ($opt{list}) {
+  if ($opt{list} eq 'articles') {
+    if ($opt{blog}) {
+      $app->articles_for_blog(blog=>$opt{blog})
+    } else {
+      for my $key ($app->article_list) {
+        print "$key\n"
+      }
+    }
+  }
+  if ($opt{list} eq 'blogs') {
+    for my $key ($app->blog_names) {
+      print "$key\n"
+    }
+  }
+} elsif ($opt{metadata}) {
+  if ($opt{article}) {
+    my $article = $app->article($opt{article});
+    print "$opt{article}\n";
+    print indent($article->metadata->as_yaml);
+  }
+} elsif ($opt{status}) {
+  $app->articles_with_setting(status => $opt{status})
+} elsif ($opt{'publish-to'}) {
+  my $article = $app->article($opt{article});
+  print "$opt{article} will publish to:\n\n";
+  for my $key ( $article->blog_list) {
+    if (my $blog = $app->blog($key)) {
+      print indent($blog->as_string());
+      print indent(sprintf("file path: %s\n\n", File::Spec->catfile($blog->publish_path, $article->path)))
+    } else {
+      warn "$opt{article}: no blog found for pubish key '$key'\n";
+    }
+  }
+} elsif ($opt{'publish'}) {
+  my %pub_args;
+  $pub_args{blog} = $opt{blog} if $opt{blog};
+  $pub_args{article} = $opt{article} if $opt{article};
+  $app->publish(%pub_args);
+}
+
+sub indent {
+  my ($text) = @_;
+  $text =~ s{^}{  };
+  $text =~ s{\n}{\n  }g;
+  $text =~ s/  $//;
+  return $text;
+}
+
+=head1 NAME
+
+curator - articule curation cli
+
+=head1 SYNOPSIS
+
+  curator --help
+  curator -l[ist] articles
+  curator -l[ist] blogs
+
+=head1 OPTIONS
+
+=over
+
+=item B<--help>
+
+Print a help message.
+
+=back
+
+=cut
