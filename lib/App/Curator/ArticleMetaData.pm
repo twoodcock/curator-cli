@@ -12,7 +12,7 @@ translation on instantiation to bring the data to canonical form.
   $meta = App::Curator::ArticleMetaData->new($hash);
 
   $string = $meta->title;
-  $date = $meta->date;
+  $date = $meta->date   ;
   $modified = $meta->modified;
   $status = $meta->status;
   $notes = $meta->notes;
@@ -20,11 +20,18 @@ translation on instantiation to bring the data to canonical form.
   $arrayref = $meta->tags;
   $arrayref = $meta->publish;
 
-  %data = $meta->as_hash;
+  # data not explicitely recognized is stashed in extra:
+  $ref = $meta->extra;
+
+  # serialization functions:
+  $ref = $meta->as_hash;
   $yaml = $meta->as_yaml;
 
-  # less useful?
-  $text = $meta->as_string;
+=head1 DESCRIPTION
+
+This module provides an interface to article metadata. It recognizes a set of
+keys. Any keys it does not recognized will be stored in extra(). Extra data will
+be restored by as_hash and as_yaml.
 
 =head1 INTERFACE
 
@@ -71,17 +78,50 @@ The publish attribute is a list. CSV or single values are converted to a list.
 
 =back
 
+=head2 title
+
+Set or get the title.
+
+=head2 date
+
+Set or get the date.
+
+=head2 modified
+
+Set or get the (last) modification date
+
+=head2 status
+
+Set or get the status. This should be draft or published.
+
+=head2 notes
+
+Set or get the notes string. This is used in some posts to say why the article
+has draft status.
+
+=head2 category
+
+Set or get the article category
+
+=head2 tags
+
+Get the list of tags - an array reference.
+
+=head2 publish
+
+Get the list of publishing locations - an array reference.
+
+=head2 summary
+
+Set or get the summary string.
+
 =head2 as_hash
 
-Return a hash containing the attributes set in the metadata.
+Return a reference to a hash containing the attributes set in the metadata.
 
 =head2 as_yaml
 
 Return the (canonical) YAML text.
-
-=head2 as_string
-
-Return a formatted string, not expected to be computer readable.
 
 =cut
 use strictures;
@@ -89,9 +129,16 @@ use Moo;
 use YAML::XS;
 
 sub BUILDARGS {
+  # If exactly 2 then we have a YAML string,
+  # otherwise, we have named parameteres.
   if (scalar(@_) == 2) {
     my ($self, $yaml) = @_;
-    my $args = YAML::XS::Load($yaml);
+    my $args;
+    if ($yaml) {
+      $args = YAML::XS::Load($yaml);
+    } else {
+      $args = {};
+    }
     $self->_translation($args);
     return $args;
   }
@@ -99,11 +146,29 @@ sub BUILDARGS {
 }
 sub _translation {
   my ($self, $args) = @_;
+  # Mash all recognized keys to lower case.
+  # Any keys we don't recognize are put into %extra, available
+  # via $obj->extra->{key}, and restored, as is, in as_hash and as_yaml.
+  my %extra;
+  for my $key (keys %$args) {
+     if ($key !~ m/title|date|modified|status|notes|category|tags|publish|summary/i) {
+        $extra{$key} = $args->{$key};
+        delete $args->{$key};
+     }
+     if ($key ne lc($key)) {
+        my $newkey = lc($key);
+        if (!$args->{$newkey} && $self->can($newkey)) {
+           $args->{$newkey} = $args->{$key};
+           delete $args->{$key};
+        }
+     }
+  }
+  # created => date unless date is specified.
   if (exists $args->{created}) {
-    # date replaces created
     $args->{date} = $args->{created};
     delete $args->{created};
   }
+  # tag => tags unless tags is specified.
   if (exists $args->{tag}){
     # replace tag with tags.
     if (!exists $args->{tags}) {
@@ -111,33 +176,40 @@ sub _translation {
     } # otherwise, ignore
     delete $args->{tag};
   }
+  # tags - break into a list if we find a single CSV string.
   if (exists $args->{tags}) {
     # tags is a list but might be stored as a single value or CSV.
     if (!ref($args->{tags})) {
       $args->{tags} = [split(qr/\s*,\s*/, $args->{tags})];
     }
   }
+  # "public = bool" => "status = published|draft"
   if (exists $args->{public}) {
     # ignore args{public} if there is a status attribute.
+    # if the is true, set status=published, else set status=draft.
     if (!$args->{status}) {
-       if ($args->{public} =~ m/true/i) {
-         $args->{status} = 'published';
-       } elsif ($args->{public} =~ m/false/i) {
-         $args->{status} = 'draft';
-       }
+      if ($args->{public} =~ m/true/i) {
+         $args->{public} = 1;
+      } elsif ($args->{public} =~ m/false/i) {
+         $args->{public} = 0;
+      }
+      $args->{status} = ($args->{public}?'published':'draft');
     }
     delete $args->{public};
   }
+  # DEFAULT status is draft.
   if (!$args->{status}) {
     # default to status=draft.
     $args->{status} = 'draft';
   }
+  # categories => category.
+  # raise "multiple categories found" if there are many categories.
   if (exists $args->{categories}) {
     # caregories is not allowed - we only support 1 category per file.
     # migrate if there is only 1, abort on multiple values.
     if (ref $args->{categories}) { # array.
       if (scalar(@{ $args->{categories}}) > 1) {
-        die "multiple categories found"
+        die "multiple categories found\n"
       } else {
         my $cat = shift @{$args->{categories}};
         $args->{category} = $cat;
@@ -147,13 +219,12 @@ sub _translation {
     }
     delete $args->{categories};
   }
+  # "category.subcategory" => "category/subcategory"
   if (exists $args->{category}) {
     # replace category.subcategory with category/subcategory.
-    $args->{category} =~ s{\.}{/};
+    $args->{category} =~ s{\.}{/}g;
   }
-  if ($args->{category} eq 'research/cms') {
-    $DB::single = 1;
-  }
+  # publish is a list of targets change frm CSV to list if it is not a list.
   if (exists $args->{publish}) {
     # publish is a list of blogs to publish to.
     # might be stored as a single value or CSV.
@@ -165,6 +236,9 @@ sub _translation {
       }
     }
   }
+
+  # now extract all keys we don't know about and store them in the extra attribute.
+  $args->{extra} = \%extra;
 }
 
 has title => ( is=>'rw', required=>1);
@@ -175,6 +249,7 @@ has notes => ( is=>'rw', );
 has category => ( is=>'rw', required=>1);
 has tags => ( is=>'ro', default=>sub {[]});
 has publish => (is=>'ro', default=>sub {[]});
+has extra => (is=>'ro', default=>sub {{}});
 has summary => (is=>'ro');
 
 sub tag_list { return @{ shift->tags || []}}
@@ -192,69 +267,19 @@ sub as_hash {
   $rv{tags} = $self->tags if $self->tags;
   $rv{publish} = $self->publish if $self->publish;
   $rv{summary} = $self->summary if $self->summary;
-  return %rv;
+  my $extra = $self->extra;
+  for my $key (keys %$extra) {
+     $rv{$key} = $extra->{$key};
+  }
+  return \%rv;
 }
 sub as_yaml {
   my ($self) = @_;
-  return YAML::XS::Dump({$self->as_hash});
-}
-sub as_string {
-  my ($self) = @_;
-  my $rv = '';
-  $rv .= sprintf("title: %s\n", $self->title) if $self->title;
-  $rv .= sprintf("date: %s\n", $self->date) if $self->date;
-  $rv .= sprintf("modified: %s\n", $self->modified) if $self->modified;
-  $rv .= sprintf("status: %s\n", $self->status) if $self->status;
-  $rv .= sprintf("notes: %s\n", $self->notes) if $self->notes;
-  $rv .= sprintf("category: %s\n", $self->category) if $self->category;
-  $rv .= sprintf("tags: %s\n", join(", ", @{ $self->tags })) if scalar $self->tags;
-  $rv .= sprintf("publish: %s\n", join(", ", @{ $self->publish })) if scalar $self->publish;
-  $rv .= sprintf("summary: %s\n", join(", ", @{ $self->summary })) if scalar $self->summary;
+  return YAML::XS::Dump($self->as_hash);
 }
 =head1 AUTHOR
 
 Tim Woodcock, C<< <tim at 0th.ca> >>
-
-=head1 BUGS
-
-Please report any bugs or feature requests to C<bug-app-curator at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=App-Curator>.  I will be notified, and then you'll
-automatically be notified of progress on your bug as I make changes.
-
-
-
-=head1 SUPPORT
-
-You can find documentation for this module with the perldoc command.
-
-    perldoc App::Curator::ArticleMetaData
-
-
-You can also look for information at:
-
-=over 4
-
-=item * RT: CPAN's request tracker (report bugs here)
-
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=App-Curator>
-
-=item * AnnoCPAN: Annotated CPAN documentation
-
-L<http://annocpan.org/dist/App-Curator>
-
-=item * CPAN Ratings
-
-L<http://cpanratings.perl.org/d/App-Curator>
-
-=item * Search CPAN
-
-L<http://search.cpan.org/dist/App-Curator/>
-
-=back
-
-
-=head1 ACKNOWLEDGEMENTS
-
 
 =head1 LICENSE AND COPYRIGHT
 
