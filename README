@@ -1,47 +1,28 @@
 App-Curator
 
-The README is used to introduce the module and provide instructions on
-how to install the module, any machine dependencies it may have (for
-example C compilers and installed libraries) and any other information
-that should be provided before the module is installed.
+The curator app provides a basic curation facility for a collection of blog
+posts. Store your articles in a central collection and publish them to any
+subset of the blogs set up in your curator configuration file. Automatically
+translate post metadata to the syntax used by your blog.
 
-A README file is required for CPAN modules since CPAN extracts the README
-file from a module distribution so that people browsing the archive
-can use it to get an idea of the module's uses. It is usually a good idea
-to provide version information here so that people can decide whether
-fixes for the module are worth downloading.
+VERSION INFORMATION
 
+This version is designed to publish to a pelican blog.
+
+TODO
+
+* Intruduce publisher plugins to allow the curator to publish to different
+  blogs.
+   - different pelican blogs might want content stored in different places.
+   - Is there a need for any engine/CMS other than pelican?
 
 INSTALLATION
 
-To install this module, run the following commands:
-
-	perl Makefile.PL
-	make
-	make test
-	make install
+To be determined.
 
 SUPPORT AND DOCUMENTATION
 
-After installing, you can find documentation for this module with the
-perldoc command.
-
-    perldoc App::Curator
-
-You can also look for information at:
-
-    RT, CPAN's request tracker (report bugs here)
-        http://rt.cpan.org/NoAuth/Bugs.html?Dist=App-Curator
-
-    AnnoCPAN, Annotated CPAN documentation
-        http://annocpan.org/dist/App-Curator
-
-    CPAN Ratings
-        http://cpanratings.perl.org/d/App-Curator
-
-    Search CPAN
-        http://search.cpan.org/dist/App-Curator/
-
+Contact tim -at- woodcock.ca.
 
 LICENSE AND COPYRIGHT
 
@@ -70,4 +51,3 @@ HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
-
