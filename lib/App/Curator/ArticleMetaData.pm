@@ -151,7 +151,10 @@ sub _translation {
   # via $obj->extra->{key}, and restored, as is, in as_hash and as_yaml.
   my %extra;
   for my $key (keys %$args) {
-     if ($key !~ m/title|date|modified|status|notes|category|tags|publish|summary/i) {
+     if ($key !~ m/title|date|modified|status|notes|category|tags?|publish|summary|public|created|categories/i) {
+        # any unrecognized key is put into the extra data stash to be put
+        # directly into the published YAML frontmatter.
+        # (Keys that are translated into other known keys are "recognized".)
         $extra{$key} = $args->{$key};
         delete $args->{$key};
      }
@@ -160,7 +163,7 @@ sub _translation {
         if (!$args->{$newkey} && $self->can($newkey)) {
            $args->{$newkey} = $args->{$key};
            delete $args->{$key};
-        }
+         }
      }
   }
   # created => date unless date is specified.
