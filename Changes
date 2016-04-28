@@ -1,5 +1,8 @@
 Revision history for App-Curator
 
-0.01    Date/time
-        First version, released on an unsuspecting world.
-
+0.01    2016-04-19 13:52
+        First git commit.
+0.02    2016-04-27 20:40
+        Refactoring, documentation clean up.
+        Improve metadata importing.
+        Universal article list.
