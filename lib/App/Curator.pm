@@ -17,6 +17,17 @@ This module provides the API used by the curator CLI.
 It assembles the articles and implements the functions
 required to deliver content to the user.
 
+   $app = App::Curator->new(config_file => $path);
+
+   # article routes:
+   @list = $app->article_list();
+   # filter for blog and/or status:
+   @list = $app->article_list(blog=>$name);
+   @list = $app->article_list(status=>$status);
+   @list = $app->article_list(blog=>$name, status=>$status);
+
+   $article = $app->article($route);
+
 =head1 CONFIGURATION FILE SYNTAX
 
 The configuration is a YAML file containing data about the blog source to be
@@ -50,9 +61,10 @@ Return the list of blog names.
 Return the blog object for the given name. This refers to an entry in the
 configuration file.
 
-=head2 article_list
+=head2 article_list([blog=>$name, status=>$status])
 
-Return the list of relative paths to the articles in the source.
+Return the list of relative paths to the articles in the source. The list can be
+filtered on blog or status.
 
 =head2 article($relpath)
 
@@ -144,7 +156,27 @@ has _blogs => (
 );
 
 sub article { my ($self, $key) = @_; return $self->_articles()->{$key}; }
-sub article_list {my ($self) = @_;  return sort keys %{ $self->_articles() }; }
+sub article_list {
+   my ($self, %params) = @_;
+   my @rv;
+   my @test;
+   if (my $blog = $params{blog}) {
+      # include all articles that include $blog.
+      push @test, sub { my ($a) = shift; return scalar grep { $_ eq $blog } $a->blog_list };
+   }
+   if (my $status = $params{status}) {
+      push @test, sub { my ($a) = shift; return $a->status() eq $status };
+   }
+   my @list = grep {
+      my $route = $_;
+      my $want = 1;
+      for my $test (@test) {
+         $want &&= $test->($self->_articles()->{$route});
+      }
+      $want;
+   } keys %{ $self->_articles()};
+   return sort @list;
+}
 has _articles => (
   is => 'rw',
   default => sub { return {};},
@@ -281,7 +313,7 @@ sub articles_with_setting {
     }
     my $match = 1;
     if ($params{status}) {
-      if ($article->status ne $params{status}) {
+      if ($article->metadata->status ne $params{status}) {
         $match = 0;
       }
     }
@@ -295,74 +327,10 @@ sub articles_with_setting {
 
 }
 
-sub articles_for_blog {
-  my ($self, %params) = @_;
-  my %by_blog;
-  for my $route ($self->article_list) {
-    warn "try $route";
-    my $article = $self->article($route);
-    if (!$article) {
-      die "Failed to locate article $route: article not found.\n";
-    }
-    for my $blog ($article->blog_list) {
-      if (!exists($params{blog}) || $blog eq $params{blog}) {
-        push @{ $by_blog{$blog} ||= [] },  $route;
-      }
-    }
-  }
-  for my $blog (sort keys %by_blog){
-    printf("Articles for blog %s:\n", $blog);
-    for my $route (@{ $by_blog{$blog} }) {
-      printf("  %s\n", $route);
-    }
-  }
-}
 
 =head1 AUTHOR
 
 Tim Woodcock, C<< <tim at 0th.ca> >>
-
-=head1 BUGS
-
-Please report any bugs or feature requests to C<bug-app-curator at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=App-Curator>.  I will be notified, and then you'll
-automatically be notified of progress on your bug as I make changes.
-
-
-
-
-=head1 SUPPORT
-
-You can find documentation for this module with the perldoc command.
-
-    perldoc App::Curator
-
-
-You can also look for information at:
-
-=over 4
-
-=item * RT: CPAN's request tracker (report bugs here)
-
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=App-Curator>
-
-=item * AnnoCPAN: Annotated CPAN documentation
-
-L<http://annocpan.org/dist/App-Curator>
-
-=item * CPAN Ratings
-
-L<http://cpanratings.perl.org/d/App-Curator>
-
-=item * Search CPAN
-
-L<http://search.cpan.org/dist/App-Curator/>
-
-=back
-
-
-=head1 ACKNOWLEDGEMENTS
-
 
 =head1 LICENSE AND COPYRIGHT
 
