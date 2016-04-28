@@ -8,8 +8,8 @@ has base_path => ( is => 'ro', default=>'.' );
 has dir => ( is => 'ro', required=>1 );
 has filename => ( is => 'ro', required=>1 );
 # body and metadata are lazily loaded from a file.
-# use a trick attribute, _loaded, set to 1 when the file is loaded.
-# The lazy builder for _loaded loads the file and sets body and metadata.
+# use a trick attribute, _loaded that will be true when the file is loaded.
+# The builder for _loaded loads the file and sets body and metadata.
 has _loaded => ( is => 'lazy', builder => '_load');
 has body => ( is => 'lazy', writer=> '_set_body');
 has metadata => (
@@ -113,68 +113,50 @@ Version 0.01
 
 our $VERSION = '0.01';
 
-
 =head1 SYNOPSIS
 
 This module (lazily) loads an article and its metadata.
 
     use App::Curator::Article;
 
-    my $article = App::Curator->new(path=>$path);
+    my $article = App::Curator->new(dir=>$dir);
     $list = $article->metadata->{tags};
 
 =head1 SUBROUTINES/METHODS
 
-=head2 new
+=head2 new(dir=>$dir, filename=>$name[, %params])
 
 Build a new article object. Don't read the file or load the metadata yet.
 
+=over
+
+=item dir: The relative dirctory's path.
+
+=item filename: The name of the file containing this article.
+
+=item base_path: (optional) The base path.
+
+=back
+
+=head2 base_path
+
+Return the base path.
+
+=head2 dir
+
+Return the relative directory's path.
+
+=head2 filename
+
+Return the file name.
+
 =head2 metadata
 
-Return the article metdata as a hash.
+Return the article metdata (App::Curator::Metadata)
 
 =head1 AUTHOR
 
 Tim Woodcock, C<< <tim at 0th.ca> >>
-
-=head1 BUGS
-
-Please report any bugs or feature requests to C<bug-app-curator at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=App-Curator>.  I will be notified, and then you'll
-automatically be notified of progress on your bug as I make changes.
-
-
-
-
-=head1 SUPPORT
-
-You can find documentation for this module with the perldoc command.
-
-    perldoc App::Curator
-
-
-You can also look for information at:
-
-=over 4
-
-=item * RT: CPAN's request tracker (report bugs here)
-
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=App-Curator>
-
-=item * AnnoCPAN: Annotated CPAN documentation
-
-L<http://annocpan.org/dist/App-Curator>
-
-=item * CPAN Ratings
-
-L<http://cpanratings.perl.org/d/App-Curator>
-
-=item * Search CPAN
-
-L<http://search.cpan.org/dist/App-Curator/>
-
-=back
-
 
 =head1 ACKNOWLEDGEMENTS
 

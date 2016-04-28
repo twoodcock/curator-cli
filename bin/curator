@@ -1,7 +1,5 @@
 #!/usr/bin/perl
 use strictures;
-# This must not be required in production:
-use lib '/home/tim/perl/extlib/lib/perl5';
 use lib 'lib/';
 
 use App::Curator;
@@ -30,18 +28,22 @@ my $app = App::Curator->new(config_file => $opt{config});
 
 if ($opt{list}) {
   if ($opt{list} eq 'articles') {
+     my %filter;
+    my @list;
     if ($opt{blog}) {
-      $app->articles_for_blog(blog=>$opt{blog})
-    } else {
-      for my $key ($app->article_list) {
-        print "$key\n"
-      }
+      $filter{blog} = $opt{blog}
     }
-  }
-  if ($opt{list} eq 'blogs') {
+    if ($opt{status}) {
+      $filter{status} = $opt{status}
+    }
+    print join("\n", $app->article_list(%filter), "")
+  } elsif ($opt{list} eq 'blogs') {
     for my $key ($app->blog_names) {
       print "$key\n"
     }
+  } else {
+     warn "Invalid list request.\n";
+     pod2usage(-verbose=>0 );
   }
 } elsif ($opt{metadata}) {
   if ($opt{article}) {
@@ -54,7 +56,7 @@ if ($opt{list}) {
 } elsif ($opt{'publish-to'}) {
   my $article = $app->article($opt{article});
   print "$opt{article} will publish to:\n\n";
-  for my $key ( $article->blog_list) {
+  for my $key ( $article->metadata->blog_list) {
     if (my $blog = $app->blog($key)) {
       print indent($blog->as_string());
       print indent(sprintf("file path: %s\n\n", File::Spec->catfile($blog->publish_path, $article->path)))
@@ -84,8 +86,21 @@ curator - articule curation cli
 =head1 SYNOPSIS
 
   curator --help
+
+  # Specify a configuration file:
+  curator -c 'config.yaml'
+
+  # List commands:
   curator -l[ist] articles
   curator -l[ist] blogs
+  curator -s draft|published
+
+  # Show commands:
+  curator -m[etadata] -a {article}
+  curator --pt -a {article}
+
+  # Publish articles to all blogs.
+  curator -c 'config.yaml' --publish
 
 =head1 OPTIONS
 
@@ -96,5 +111,27 @@ curator - articule curation cli
 Print a help message.
 
 =back
+
+=item B<-l> articles|blogs
+
+(B<--list>)
+List articles ore blogs.
+
+=item B<-c> config.yaml
+
+(B<--config>)
+Specify the configuration file.
+
+=item B<-s> draft|published
+
+(B<--status>)
+List articles with the given status.
+
+=item B<--pt> -a {article}
+
+(B<--publish-to>)
+List articles with the given status.
+
+=item
 
 =cut
