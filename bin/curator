@@ -26,6 +26,9 @@ if ($opt{help}) {
 
 my $app = App::Curator->new(config_file => $opt{config});
 
+if (exists $opt{status}) {
+   $opt{list} = 'articles';
+}
 if ($opt{list}) {
   if ($opt{list} eq 'articles') {
      my %filter;
@@ -51,8 +54,6 @@ if ($opt{list}) {
     print "$opt{article}\n";
     print indent($article->metadata->as_yaml);
   }
-} elsif ($opt{status}) {
-  $app->articles_with_setting(status => $opt{status})
 } elsif ($opt{'publish-to'}) {
   my $article = $app->article($opt{article});
   print "$opt{article} will publish to:\n\n";
@@ -94,6 +95,7 @@ curator - articule curation cli
   curator -l[ist] articles
   curator -l[ist] blogs
   curator -s draft|published
+  curator -s draft|published -b {blogname}
 
   # Show commands:
   curator -m[etadata] -a {article}
@@ -110,14 +112,12 @@ curator - articule curation cli
 
 Print a help message.
 
-=back
-
 =item B<-l> articles|blogs
 
 (B<--list>)
 List articles ore blogs.
 
-=item B<-c> config.yaml
+=item B<-c> config.yam
 
 (B<--config>)
 Specify the configuration file.
@@ -132,6 +132,11 @@ List articles with the given status.
 (B<--publish-to>)
 List articles with the given status.
 
-=item
+=back
+
+=head1 DESCRIPTION
+
+The curator app interacts with the collection of articles, providing information
+and a publish command for the collection of articles.
 
 =cut

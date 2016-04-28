@@ -6,3 +6,4 @@ Revision history for App-Curator
         Refactoring, documentation clean up.
         Improve metadata importing.
         Universal article list.
+        Factor out redundant behavior.

@@ -1,15 +1,15 @@
 package App::Curator;
 =head1 NAME
 
-App::Curator - The great new App::Curator!
+App::Curator - Curate a set of blog posts; publish to blog by configuration.
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 SYNOPSIS
 
@@ -27,6 +27,12 @@ required to deliver content to the user.
    @list = $app->article_list(blog=>$name, status=>$status);
 
    $article = $app->article($route);
+
+=head1 DESCRIPTION
+
+The curator app curates a set of blog posts/articles and publishes them to their
+configured locations. The collection config file defines a set of blogs. Each
+post in the collection may specify 1 or more blogs for publishing.
 
 =head1 CONFIGURATION FILE SYNTAX
 
@@ -302,31 +308,6 @@ sub publish {
     printf("No articles published.\n");
   }
 }
-
-sub articles_with_setting {
-  my ($self, %params) = @_;
-  my @list;
-  for my $route ($self->article_list) {
-    my $article = $self->article($route);
-    if (!$article) {
-      die "Failed to locate article $route: article not found.\n";
-    }
-    my $match = 1;
-    if ($params{status}) {
-      if ($article->metadata->status ne $params{status}) {
-        $match = 0;
-      }
-    }
-    if ($match) {
-      push @list, $route;
-    }
-  }
-  for my $route (@list){
-    printf("  %s\n", $route);
-  }
-
-}
-
 
 =head1 AUTHOR
 
